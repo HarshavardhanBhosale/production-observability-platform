@@ -1,0 +1,101 @@
+
+name: harsh-compose
+
+networks:
+  public-net:
+    driver: bridge
+    internal: false
+  backend-net:
+    driver: bridge
+    internal: true
+  monitoring-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: observability-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_dev_password}
+      POSTGRES_DB: app_production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    security_opt:
+      - no-new-privileges:true
+    user: "701:701"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d app_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: observability-redis
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-net
+    security_opt:
+      - no-new-privileges:true
+    user: "100:101"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: observability-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app_user:${POSTGRES_PASSWORD:-secure_dev_password}@postgres:5432/app_production
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: production
+      DEBUG: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks:
+      - backend-net
+      - public-net
+      - monitoring-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: observability-frontend
+    restart: always
+    environment:
+      BACKEND_URL: http://backend:8000
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - public-net
+    depends_on:
+      backend:
+        condition: service_started
