@@ -21,7 +21,8 @@ volumes:
     driver: local
   loki_data:
     driver: local
-
+  tempo_data:
+    driver: local
 
 services:
   postgres:
@@ -198,3 +199,28 @@ services:
       - monitoring-net
     security_opt:
       - no-new-privileges:true
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: observability-tempo
+    restart: always
+    command: [ "-config.file=/etc/tempo/tempo.yml" ]
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml
+      - tempo_data:/tmp/tempo
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    container_name: observability-otel-collector
+    restart: always
+    command: [ "--config=/etc/otel-collector-config.yml" ]
+    volumes:
+      - ./otel/otel-collector-config.yml:/etc/otel-collector-config.yml
+    networks:
+      - monitoring-net
+      - public-net
+    depends_on:
+      - tempo

@@ -15,8 +15,26 @@ from app.logging_config import setup_logging
 from app.middleware.request_id import RequestIDMiddleware
 from app.routers import health
 
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+
+
 setup_logging()
 logger = structlog.get_logger()
+def setup_telemetry(app: FastAPI):
+    if settings.ENVIRONMENT == "production":
+        provider = TracerProvider()
+        processor = BatchSpanProcessor(
+            OTLPSpanExporter(endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT, insecure=True)
+        )
+        provider.add_span_processor(processor)
+        trace.set_tracer_provider(provider)
+        
+        
+        FastAPIInstrumentor.instrument_app(app)
+        from app.database import engine, redis_client
+        SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+        RedisInstrumentor().instrument(client=redis_client)
 
 def setup_telemetry(app: FastAPI):
     if settings.ENVIRONMENT == "production":
