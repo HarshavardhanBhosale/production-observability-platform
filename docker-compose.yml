@@ -23,6 +23,8 @@ volumes:
     driver: local
   tempo_data:
     driver: local
+  alertmanager_data:
+    driver: local
 
 services:
   postgres:
@@ -116,6 +118,7 @@ services:
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     networks:
       - monitoring-net
@@ -224,3 +227,18 @@ services:
       - public-net
     depends_on:
       - tempo
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: observability-alertmanager
+    restart: always
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
