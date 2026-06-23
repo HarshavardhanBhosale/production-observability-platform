@@ -17,6 +17,8 @@ volumes:
     driver: local
   redis_data:
     driver: local
+  prometheus_data:
+    driver: local
 
 services:
   postgres:
@@ -99,3 +101,53 @@ services:
     depends_on:
       backend:
         condition: service_started
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: observability-prometheus
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: observability-node-exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: observability-cadvisor
+    restart: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+
