@@ -151,3 +151,21 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: observability-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin_secure_password}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    networks:
+      - monitoring-net
+      - public-net
+    ports:
+      - "3000:3000"
+    security_opt:
+      - no-new-privileges:true
