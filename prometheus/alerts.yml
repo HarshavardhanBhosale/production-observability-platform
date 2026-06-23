@@ -1,0 +1,49 @@
+groups:
+  - name: infrastructure_alerts
+    rules:
+      - alert: HostCpuUtilizationHigh
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU utilization critical on {{ $labels.instance }}"
+          description: "CPU utilization has breached 90% for over 10 minutes. Current value: {{ $value | printf \"%.2f\" }}%"
+
+      - alert: HostMemoryAvailableLow
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host out of memory risk on {{ $labels.instance }}"
+          description: "Available RAM has dropped below 10%. Out-of-memory killer risk is imminent."
+
+  - name: application_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target service down: {{ $labels.job }}"
+          description: "Prometheus scraper cannot connect to the endpoint for over 1 minute. Service instance is offline."
+
+      - alert: HighHttpErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FastAPI high error rate detected"
+          description: "HTTP 5xx server exceptions have breached 5% of total request throughput over the last 2 minutes."
+
+      - alert: HighP99LatencyBreach
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow application response times detected"
+          description: "99% of API clients are experiencing latency greater than 2 seconds for over 3 minutes."
