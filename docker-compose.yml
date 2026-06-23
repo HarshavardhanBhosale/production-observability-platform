@@ -19,6 +19,9 @@ volumes:
     driver: local
   prometheus_data:
     driver: local
+  loki_data:
+    driver: local
+
 
 services:
   postgres:
@@ -167,5 +170,31 @@ services:
       - public-net
     ports:
       - "3000:3000"
+    security_opt:
+      - no-new-privileges:true
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: observability-loki
+    restart: always
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/tmp/loki
+    networks:
+      - monitoring-net
+    security_opt:
+      - no-new-privileges:true
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: observability-promtail
+    restart: always
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring-net
     security_opt:
       - no-new-privileges:true
