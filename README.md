@@ -53,39 +53,39 @@ flowchart TD
     end
 
     %% Client Routing
-    Browser -->|HTTPS| Nginx
-    Nginx -->|Proxy Pass| Frontend
-    Nginx -->|/api/| Backend
-    Nginx -->|/grafana/ (Basic Auth)| Grafana
-    Nginx -->|/alertmanager/ (Basic Auth)| Alertmanager
+    Browser -->|"HTTPS"| Nginx
+    Nginx -->|"Proxy Pass"| Frontend
+    Nginx -->|"/api/"| Backend
+    Nginx -->|"/grafana/ (Basic Auth)"| Grafana
+    Nginx -->|"/alertmanager/ (Basic Auth)"| Alertmanager
 
     %% Application Internal Traffic
-    Frontend -->|HTTP API| Backend
-    Backend -->|Async Session| Postgres
-    Backend -->|Cache/Queue Ping| Redis
+    Frontend -->|"HTTP API"| Backend
+    Backend -->|"Async Session"| Postgres
+    Backend -->|"Cache/Queue Ping"| Redis
 
     %% Traces Pipeline
-    Backend -->|OTLP Traces| OtelCollector
-    OtelCollector -->|OTLP / gRPC| Tempo
+    Backend -->|"OTLP Traces"| OtelCollector
+    OtelCollector -->|"OTLP / gRPC"| Tempo
 
     %% Logs Pipeline
     DockerSocket["/var/run/docker.sock"] -.-> Promtail
-    Promtail -->|Push API| Loki
+    Promtail -->|"Push API"| Loki
 
     %% Metrics Pipeline
-    Prometheus -->|Scrape /metrics| Backend
-    Prometheus -->|Scrape| NodeExporter
-    Prometheus -->|Scrape| cAdvisor
-    Prometheus -->|Self Scrape| Prometheus
+    Prometheus -->|"Scrape /metrics"| Backend
+    Prometheus -->|"Scrape"| NodeExporter
+    Prometheus -->|"Scrape"| cAdvisor
+    Prometheus -->|"Self Scrape"| Prometheus
 
     %% Alerting
-    Prometheus -->|Send Alerts| Alertmanager
-    Alertmanager -->|Webhooks/API| Notifications
+    Prometheus -->|"Send Alerts"| Alertmanager
+    Alertmanager -->|"Webhooks/API"| Notifications
 
     %% Dashboards Data Retrieval
-    Grafana -->|Query Metrics| Prometheus
-    Grafana -->|Query Traces| Tempo
-    Grafana -->|Query Logs| Loki
+    Grafana -->|"Query Metrics"| Prometheus
+    Grafana -->|"Query Traces"| Tempo
+    Grafana -->|"Query Logs"| Loki
 ```
 
 ---
