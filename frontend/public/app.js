@@ -16,7 +16,7 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
         }
         const config = await configResponse.json();
         
-        const backendEndpoint = `${config.BACKEND_URL}/health`;
+        const backendEndpoint = '/api/health';
         
         const apiResponse = await fetch(backendEndpoint, {
             method: 'GET',
